@@ -24,3 +24,117 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+/* Voice Assistant Styles */
+.glass-morphism {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.voice-button {
+  @apply w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 border-2;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.voice-button:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+.voice-button.listening {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(248, 113, 113, 0.2));
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #f87171;
+  animation: pulse-red 2s infinite;
+}
+
+.voice-button.processing {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(168, 85, 247, 0.2));
+  border-color: rgba(147, 51, 234, 0.6);
+  color: #a855f7;
+}
+
+.voice-button.speaking {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.2));
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fbbf24;
+  animation: pulse-orange 1.5s infinite;
+}
+
+.voice-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Status indicator */
+.status-dot {
+  @apply w-3 h-3 rounded-full;
+}
+
+.status-dot.connected {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.status-dot.connecting {
+  background: #f59e0b;
+  animation: pulse-orange 1s infinite;
+}
+
+.status-dot.disconnected {
+  background: #ef4444;
+}
+
+/* Animations */
+@keyframes pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes pulse-orange {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .glass-morphism {
+    @apply p-6;
+  }
+  
+  .voice-button {
+    @apply w-14 h-14;
+  }
+  
+  .voice-button svg {
+    @apply h-6 w-6;
+  }
+}
+
+/* Loading spinner enhancement */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

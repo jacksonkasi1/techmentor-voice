@@ -1,25 +1,30 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    cssChunking: 'strict', // Better CSS optimization for Tailwind v4
-  },
+  // Fix cross-origin warnings in development
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/_next/:path*',
         headers: [
           {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp'
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
           },
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin'
-          }
-        ]
-      }
-    ]
+        ],
+      },
+    ];
+  },
+  
+  // Allow dev origins (for Gitpod/CodeSpaces)
+  allowedDevOrigins: [
+    '3000-jacksonkasi-techmentorv-d05cubf3qoi.ws-us120.gitpod.io',
+    'localhost:3000',
+    '127.0.0.1:3000'
+  ],
+  
+  experimental: {
+    serverComponentsExternalPackages: ['@google/generative-ai']
   }
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

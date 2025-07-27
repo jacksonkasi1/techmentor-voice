@@ -1,132 +1,117 @@
 'use client';
 import { useState } from 'react';
-import VoiceAssistant from '@/components/VoiceAssistant';
-import ConversationHistory from '@/components/ConversationHistory';
-import { Brain, FileText, Zap } from 'lucide-react';
+import VoiceAssistant from '@/components/voice-assistant/VoiceAssistant';
 
 interface Conversation {
   id: string;
-  timestamp: Date;
   userInput: string;
   aiResponse: string;
-  context?: string;
+  context?: any;
+  timestamp: Date;
 }
 
 export default function Home() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleNewConversation = (userInput: string, aiResponse: string, context?: string) => {
+  const handleConversation = (userInput: string, aiResponse: string, context?: any) => {
     const newConversation: Conversation = {
       id: Date.now().toString(),
-      timestamp: new Date(),
       userInput,
       aiResponse,
-      context
+      context,
+      timestamp: new Date()
     };
+    
     setConversations(prev => [newConversation, ...prev]);
   };
 
   return (
-    <main className="min-h-screen bg-gradient-voice">
-      {/* Header */}
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-12 animate-fadeIn">
-          {/* Title Section */}
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <Brain className="h-10 w-10 text-purple-400 animate-pulse" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
-              TechMentor Voice
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">
+              TechMentor Voice Assistant
             </h1>
-            <Zap className="h-10 w-10 text-yellow-400 animate-bounce" />
-          </div>
-          
-          {/* Description */}
-          <div className="max-w-3xl mx-auto mb-8">
-            <p className="text-xl text-gray-200 leading-relaxed font-light">
-              Real-time voice assistant powered by AssemblyAI Universal-Streaming, 
-              Context7 MCP, and Gemini 2.0 Flash. Ask anything about documentation!
+            <p className="text-gray-300">
+              Ask me about any technology, framework, or programming concept
             </p>
           </div>
-          
-          {/* Tech Stack Badges - Better Alignment */}
-          <div className="flex flex-wrap items-center justify-center gap-3 max-w-2xl mx-auto">
-            <span className="px-4 py-2 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-full backdrop-blur-sm border border-blue-500/30 transition-all duration-200">
-              Universal-Streaming
-            </span>
-            <span className="px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white text-sm font-medium rounded-full backdrop-blur-sm border border-green-500/30 transition-all duration-200">
-              Context7 MCP
-            </span>
-            <span className="px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white text-sm font-medium rounded-full backdrop-blur-sm border border-purple-500/30 transition-all duration-200">
-              Gemini 2.0 Flash
-            </span>
-            <span className="px-4 py-2 bg-orange-600/80 hover:bg-orange-600 text-white text-sm font-medium rounded-full backdrop-blur-sm border border-orange-500/30 transition-all duration-200">
-              ElevenLabs TTS
-            </span>
-          </div>
-        </div>
 
-        {/* Main Voice Interface - Centered */}
-        <div className="max-w-4xl mx-auto animate-slideUp">
+          {/* Voice Assistant */}
           <div className="mb-8">
-            <VoiceAssistant 
-              onConversation={handleNewConversation}
+            <VoiceAssistant
+              onConversation={handleConversation}
               onProcessingChange={setIsProcessing}
             />
-          </div>
-          
-          {/* Sample Queries - Improved Grid */}
-          <div className="mb-8 p-8 glass-morphism rounded-3xl border border-slate-600/30">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-3">
-                <FileText className="h-6 w-6 text-blue-400" />
-                Try asking:
-              </h3>
-              <p className="text-gray-400 text-sm">Click on any example below or speak directly</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-              <div className="group p-4 bg-slate-800/60 hover:bg-slate-700/60 rounded-xl border border-slate-600/40 hover:border-slate-500/60 backdrop-blur-sm transition-all duration-300 cursor-pointer">
-                <p className="text-gray-200 group-hover:text-white transition-colors duration-200 text-center">
-                  {`"How do I set up authentication in Next.js 14?"`}
-                </p>
-              </div>
-              <div className="group p-4 bg-slate-800/60 hover:bg-slate-700/60 rounded-xl border border-slate-600/40 hover:border-slate-500/60 backdrop-blur-sm transition-all duration-300 cursor-pointer">
-                <p className="text-gray-200 group-hover:text-white transition-colors duration-200 text-center">
-                  {`"Show me TypeScript interfaces for React hooks"`}
-                </p>
-              </div>
-              <div className="group p-4 bg-slate-800/60 hover:bg-slate-700/60 rounded-xl border border-slate-600/40 hover:border-slate-500/60 backdrop-blur-sm transition-all duration-300 cursor-pointer">
-                <p className="text-gray-200 group-hover:text-white transition-colors duration-200 text-center">
-                  {`"Explain Cloudflare Workers deployment"`}
-                </p>
-              </div>
-              <div className="group p-4 bg-slate-800/60 hover:bg-slate-700/60 rounded-xl border border-slate-600/40 hover:border-slate-500/60 backdrop-blur-sm transition-all duration-300 cursor-pointer">
-                <p className="text-gray-200 group-hover:text-white transition-colors duration-200 text-center">
-                  {`"What's new in Python 3.12?"`}
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Conversation History */}
           {conversations.length > 0 && (
-            <div className="animate-fadeIn">
-              <ConversationHistory 
-                conversations={conversations}
-                isProcessing={isProcessing}
-              />
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-white mb-4">
+                Recent Conversations
+              </h2>
+              
+              {conversations.map((conv) => (
+                <div key={conv.id} className="glass-morphism rounded-lg p-6">
+                  {/* User Question */}
+                  <div className="mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        You
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-medium">{conv.userInput}</p>
+                        <p className="text-gray-400 text-sm mt-1">
+                          {conv.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI Response */}
+                  <div className="border-l-2 border-purple-500 pl-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        AI
+                      </div>
+                      <div className="flex-1">
+                        <div className="prose prose-invert max-w-none">
+                          <p className="text-gray-100 whitespace-pre-wrap">
+                            {conv.aiResponse}
+                          </p>
+                        </div>
+                        
+                        {/* Context Information */}
+                        {conv.context?.libraries?.length > 0 && (
+                          <div className="mt-3 p-3 bg-slate-700/50 rounded border border-slate-600">
+                            <p className="text-sm text-gray-300">
+                              📚 Sources: {conv.context.libraries.join(', ')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Processing Indicator */}
+          {isProcessing && (
+            <div className="fixed bottom-4 right-4 glass-morphism rounded-lg p-4">
+              <div className="flex items-center gap-2 text-purple-400">
+                <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm font-medium">Processing your question...</span>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Footer - Better Spacing */}
-        <div className="text-center mt-16 pt-8 border-t border-slate-700/50">
-          <p className="text-gray-400 text-sm">
-            Built for AssemblyAI Voice Agents Challenge • Powered by Universal-Streaming
-          </p>
-        </div>
       </div>
-    </main>
+    </div>
   );
 }
