@@ -2,29 +2,31 @@ import { geminiLite } from '@/lib/gemini-client';
 import { CONVERSATIONAL_PHRASES } from './types';
 
 export class QueryCorrector {
+  static isConversational(query: string): boolean {
+    const lowerQuery = query.toLowerCase().trim();
+    return CONVERSATIONAL_PHRASES.some(phrase => lowerQuery.includes(phrase));
+  }
+
   static async correct(query: string): Promise<string> {
     try {
-      const prompt = `You are a voice query preprocessor for a technical assistant. Convert voice input to clean search terms.
+      const prompt = `Extract the main technology/library name from this voice query for documentation search.
 
 User said: "${query}"
 
 Rules:
-1. If it's a general conversation ("hello", "can you hear me", "test"), return it as-is
-2. If it mentions technology, extract the tech term only
-3. Fix speech errors: "better also" → "better auth", "drizzle worm" → "drizzle orm"
-4. Remove filler words: "um", "uh", "like", "you know"
-5. Keep it simple - return 1-3 words maximum
-6. NO explanations, NO parentheses, NO "unsure" - just the corrected term
+1. Keep specific library names intact: "better auth" should stay "better auth"
+2. Fix speech errors: "better also" → "better auth", "drizzle worm" → "drizzle orm"  
+3. For integration questions, keep both technologies: "better auth next js" → "better auth nextjs"
+4. Remove filler words but keep technical terms
+5. Return 1-4 words maximum
 
 Examples:
-"can you hear me" → "can you hear me"
-"hello there" → "hello"  
+"explain better auth next js github integration" → "better auth nextjs"
 "tell me about better also" → "better auth"
-"explain drizzle worm" → "drizzle orm"
-"what is next to yes" → "nextjs"
-"um how about react" → "react"
+"how to use drizzle worm with next" → "drizzle orm nextjs"
+"react hooks tutorial" → "react hooks"
 
-Return only the corrected term:`;
+Corrected search term:`;
 
       const result = await geminiLite.generateContent(prompt);
       const correctedQuery = result.response.text().trim().replace(/['"]/g, '');
@@ -33,12 +35,7 @@ Return only the corrected term:`;
       return correctedQuery || query;
     } catch (error) {
       console.error('Query correction error:', error);
-      return query; // Fallback to original
+      return query;
     }
-  }
-
-  static isConversational(query: string): boolean {
-    const lowerQuery = query.toLowerCase().trim();
-    return CONVERSATIONAL_PHRASES.some(phrase => lowerQuery.includes(phrase));
   }
 }
