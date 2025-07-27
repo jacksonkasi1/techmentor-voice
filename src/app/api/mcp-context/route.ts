@@ -125,10 +125,44 @@ async function resolveLibraryIdsCorrect(query: string): Promise<string[]> {
       return extractLibraryNamesFromQuery(query);
     }
 
-    const data = await response.json();
-    console.log('📡 MCP resolve response:', data);
+    // Get response text to handle SSE format
+    const responseText = await response.text();
+    console.log('📡 Raw response preview:', responseText.substring(0, 200));
     
-    if (data.result?.content) {
+    // Parse the response - handle SSE format
+    let data;
+    if (responseText.includes('data: ')) {
+      // This is SSE format - extract the data chunks
+      const dataLines = responseText.split('\n')
+        .filter(line => line.startsWith('data: '))
+        .map(line => line.substring(6).trim())
+        .filter(line => line && line !== '[DONE]');
+      
+      console.log(`📦 Found ${dataLines.length} data lines`);
+      
+      if (dataLines.length > 0) {
+        // Parse the last complete data line (final result)
+        try {
+          data = JSON.parse(dataLines[dataLines.length - 1]);
+        } catch (parseError) {
+          console.error('❌ Failed to parse SSE data:', parseError);
+          console.log('Raw data line:', dataLines[dataLines.length - 1]);
+          return extractLibraryNamesFromQuery(query);
+        }
+      }
+    } else {
+      // Regular JSON response (shouldn't happen with Context7, but handle it)
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON response:', parseError);
+        return extractLibraryNamesFromQuery(query);
+      }
+    }
+    
+    console.log('📡 Parsed MCP response:', data);
+    
+    if (data?.result?.content) {
       const content = Array.isArray(data.result.content) 
         ? data.result.content[0]?.text || ''
         : data.result.content;
@@ -154,7 +188,7 @@ async function getLibraryDocumentationCorrect(libraryId: string, query: string):
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream', // Correct Accept header
+        'Accept': 'application/json, text/event-stream',
         'User-Agent': 'TechMentor-Voice/1.0'
       },
       body: JSON.stringify({
@@ -165,8 +199,8 @@ async function getLibraryDocumentationCorrect(libraryId: string, query: string):
           name: 'get-library-docs',
           arguments: {
             context7CompatibleLibraryID: libraryId,
-            tokens: 5000, // From source code - minimum tokens
-            topic: extractTopicFromQuery(query)
+            tokens: 10000,
+            topic: extractTopicFromQuery(query) || ''
           }
         }
       }),
@@ -182,15 +216,52 @@ async function getLibraryDocumentationCorrect(libraryId: string, query: string):
       return null;
     }
 
-    const data = await response.json();
+    // Get response text to handle SSE format
+    const responseText = await response.text();
+    console.log('📡 Docs response preview:', responseText.substring(0, 200));
     
-    if (data.result?.content) {
+    // Parse the response - handle SSE format
+    let data;
+    if (responseText.includes('data: ')) {
+      // This is SSE format - extract the data chunks
+      const dataLines = responseText.split('\n')
+        .filter(line => line.startsWith('data: '))
+        .map(line => line.substring(6).trim())
+        .filter(line => line && line !== '[DONE]');
+      
+      console.log(`📦 Found ${dataLines.length} data lines for docs`);
+      
+      if (dataLines.length > 0) {
+        // Parse the last complete data line (final result)
+        try {
+          data = JSON.parse(dataLines[dataLines.length - 1]);
+        } catch (parseError) {
+          console.error('❌ Failed to parse SSE docs data:', parseError);
+          return null;
+        }
+      }
+    } else {
+      // Regular JSON response
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON docs response:', parseError);
+        return null;
+      }
+    }
+    
+    if (data?.result?.content) {
       const content = Array.isArray(data.result.content) 
         ? data.result.content[0]?.text || ''
         : data.result.content;
 
       console.log(`✅ Got documentation for ${libraryId} (${content.length} chars)`);
-      return content;
+      console.log('📄 Doc preview:', content.substring(0, 200));
+      return content; // This is returning the documentation correctly
+    }
+
+    if (data?.error) {
+      console.warn(`⚠️ Error getting docs for ${libraryId}:`, data.error);
     }
 
     return null;
@@ -204,12 +275,23 @@ function extractLibraryIdsFromMCPResponse(content: string): string[] {
   const libraryIds: string[] = [];
   
   // Look for Context7 format: /org/project
-  const matches = content.match(/\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+/g);
+  // But skip the header template
+  const sections = content.split(/[-]{5,}/).filter(s => s.trim());
   
-  if (matches) {
-    libraryIds.push(...matches.slice(0, 3)); // Take first 3 matches
+  for (const section of sections) {
+    // Skip the header/template section
+    if (section.includes('format:') || section.includes('Library ID: Context7-compatible')) {
+      continue;
+    }
+    
+    // Extract library ID from the section
+    const match = section.match(/Context7-compatible library ID:\s*(\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)/);
+    if (match) {
+      libraryIds.push(match[1]);
+    }
   }
   
+  console.log('🔍 Extracted library IDs from response:', libraryIds);
   return [...new Set(libraryIds)]; // Remove duplicates
 }
 
@@ -217,7 +299,7 @@ function extractLibraryNamesFromQuery(query: string): string[] {
   const lowerQuery = query.toLowerCase();
   const detected: string[] = [];
 
-  // Enhanced library detection
+  // Enhanced library detection with actual Context7 IDs we found
   const detectionRules = [
     { keywords: ['next.js', 'nextjs', 'next'], library: '/vercel/next.js' },
     { keywords: ['react'], library: '/facebook/react' },
@@ -235,7 +317,8 @@ function extractLibraryNamesFromQuery(query: string): string[] {
     { keywords: ['supabase'], library: '/supabase/supabase' },
     { keywords: ['firebase'], library: '/firebase/firebase' },
     { keywords: ['auth', 'authentication', 'nextauth'], library: '/nextauthjs/next-auth' },
-    { keywords: ['better auth'], library: '/better-auth/better-auth' },
+    { keywords: ['better auth', 'betterauth'], library: '/get-convex/better-auth' }, // Use actual ID found
+    { keywords: ['upstash'], library: '/upstash/docs' }, // Add upstash since we tested it
   ];
 
   for (const rule of detectionRules) {
@@ -269,9 +352,10 @@ function extractTopicFromQuery(query: string): string {
     return 'deployment';
   }
   
-  return 'getting-started';
+  return ''; // Return empty string instead of 'getting-started' for broader results
 }
 
+// Keep all the other functions the same...
 function generateEnhancedContext(query: string) {
   const lowerQuery = query.toLowerCase();
   console.log('🧠 Generating enhanced context for:', query);
@@ -390,7 +474,8 @@ export async function GET() {
     fixes: [
       'Added correct Accept header: application/json, text/event-stream',
       'Using libraryName parameter as per source code',
-      'Proper Context7 library ID format (/org/project)',
+      'Using context7CompatibleLibraryID parameter for docs',
+      'Properly handling SSE responses',
       'Enhanced intelligent fallbacks for all major frameworks',
       'Better Auth + Next.js specific knowledge'
     ],

@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     // Step 1: Get context from Context7 MCP (with error handling)
     console.log('🔍 Step 1: Getting context from Context7 MCP...');
     let mcpContext = '';
+    let mcpDocumentation = '';
     let libraries: string[] = [];
     
     try {
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
-        // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(5000)
+        // Increase timeout to 15 seconds for MCP
+        signal: AbortSignal.timeout(15000)
       });
 
       console.log('📚 MCP response status:', mcpResponse.status);
@@ -46,11 +47,16 @@ export async function POST(request: NextRequest) {
       if (mcpResponse.ok) {
         const mcpData = await mcpResponse.json();
         mcpContext = mcpData.context || '';
+        mcpDocumentation = mcpData.documentation || '';
         libraries = mcpData.libraries || [];
+        
         console.log('✅ MCP context retrieved:', {
           hasContext: !!mcpContext,
           contextLength: mcpContext.length,
-          libraries: libraries
+          hasDocumentation: !!mcpDocumentation,
+          documentationLength: mcpDocumentation.length,
+          libraries: libraries,
+          source: mcpData.source
         });
       } else {
         console.warn('⚠️ MCP context retrieval failed:', mcpResponse.status);
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query,
-          context: mcpContext,
+          context: mcpContext || mcpDocumentation, // Use either context or documentation
           libraries: libraries,
           timestamp
         }),
@@ -88,6 +94,7 @@ export async function POST(request: NextRequest) {
           success: true,
           response: `I understand you're asking about: "${query}". However, I'm currently having trouble accessing my knowledge base. Could you please rephrase your question or try asking about a specific technology like Next.js, React, or Python?`,
           context: mcpContext,
+          documentation: mcpDocumentation,
           libraries: libraries,
           processingTime: Date.now() - timestamp,
           timestamp: new Date().toISOString(),
@@ -106,8 +113,9 @@ export async function POST(request: NextRequest) {
       if (!geminiResult.success) {
         return NextResponse.json({
           success: true,
-          response: `I understand you're asking about: "${query}". I'm having some technical difficulties right now, but I can still help! For ${query.toLowerCase().includes('next') ? 'Next.js' : query.toLowerCase().includes('react') ? 'React' : query.toLowerCase().includes('typescript') ? 'TypeScript' : 'this topic'}, I recommend checking the official documentation for the most up-to-date information.`,
+          response: geminiResult.response || `I understand you're asking about: "${query}". I'm having some technical difficulties right now, but I can still help! For ${query.toLowerCase().includes('next') ? 'Next.js' : query.toLowerCase().includes('react') ? 'React' : query.toLowerCase().includes('typescript') ? 'TypeScript' : 'this topic'}, I recommend checking the official documentation for the most up-to-date information.`,
           context: mcpContext,
+          documentation: mcpDocumentation,
           libraries: libraries,
           processingTime: Date.now() - timestamp,
           timestamp: new Date().toISOString(),
@@ -119,6 +127,7 @@ export async function POST(request: NextRequest) {
         success: true,
         response: geminiResult.response || 'I received your question but got an empty response. Could you please rephrase your question?',
         context: mcpContext,
+        documentation: mcpDocumentation,
         libraries: libraries,
         reasoning: geminiResult.reasoning,
         processingTime: Date.now() - timestamp,
@@ -140,6 +149,7 @@ export async function POST(request: NextRequest) {
         success: true,
         response: generateIntelligentFallback(query),
         context: mcpContext,
+        documentation: mcpDocumentation,
         libraries: libraries,
         processingTime: Date.now() - timestamp,
         timestamp: new Date().toISOString(),
@@ -166,6 +176,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Keep the rest of the functions the same...
 function generateIntelligentFallback(query: string): string {
   const lowerQuery = query.toLowerCase();
   
