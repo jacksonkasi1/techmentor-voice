@@ -1,12 +1,15 @@
 {
   "name": "techmentor-voice",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "AI Voice Assistant for Real-Time Documentation - AssemblyAI Challenge",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "npm run build && npx @cloudflare/next-on-pages@1",
+    "preview": "npm run deploy && npx wrangler pages dev .vercel/output/static"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

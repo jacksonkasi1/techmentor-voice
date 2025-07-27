@@ -1,26 +1,335 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-background: #0f172a;
+  --color-foreground: #ffffff;
+  
+  /* Custom color palette for the voice assistant */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+  
+  --color-blue-400: #60a5fa;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  
+  --color-purple-400: #a78bfa;
+  --color-purple-600: #9333ea;
+  --color-purple-700: #7c3aed;
+  
+  --color-green-400: #4ade80;
+  --color-green-600: #16a34a;
+  
+  --color-red-400: #f87171;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  
+  --color-orange-400: #fb923c;
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  
+  --color-yellow-400: #facc15;
+  
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  
+  /* Animation durations */
+  --animate-pulse-slow: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-slow: bounce 2s infinite;
+  --animate-fadeIn: fadeIn 0.5s ease-out;
+  --animate-slideUp: slideUp 0.6s ease-out;
+  --animate-pulse-custom: pulse-custom 2s infinite;
+  
+  /* Custom animations */
+  --keyframes-fadeIn: {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  };
+  
+  --keyframes-slideUp: {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  };
+  
+  --keyframes-pulse-custom: {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  };
+  
+  /* Font families */
+  --font-family-mono: Monaco, Menlo, 'Ubuntu Mono', monospace;
+  
+  /* Backdrop blur */
+  --backdrop-blur-xs: blur(2px);
+  
+  /* Border radius */
+  --radius-2xl: 1rem;
+  
+  /* Shadows */
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Base styles */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: inherit;
+  color: var(--color-foreground);
+  background: var(--color-background);
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-slate-800);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-600);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-500);
+}
+
+/* Smooth transitions */
+* {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Define keyframe animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-custom {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Custom animation classes */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.6s ease-out;
+}
+
+.animate-pulse-custom {
+  animation: pulse-custom 2s infinite;
+}
+
+/* Code highlighting */
+pre {
+  background: var(--color-slate-800) !important;
+  border: 1px solid var(--color-slate-700);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: var(--font-family-mono);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+code {
+  background: var(--color-slate-700);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-blue-600);
+  outline-offset: 2px;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 2px solid var(--color-slate-700);
+  border-top: 2px solid var(--color-blue-600);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Gradient backgrounds */
+.bg-gradient-voice {
+  background: linear-gradient(135deg, var(--color-slate-900) 0%, var(--color-purple-900) 50%, var(--color-slate-900) 100%);
+}
+
+/* Glass morphism effects */
+.glass-morphism {
+  backdrop-filter: blur(12px);
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+/* Voice assistant specific styles */
+.voice-button {
+  @apply p-6 rounded-full transition-all duration-200 shadow-lg;
+}
+
+.voice-button:hover {
+  transform: scale(1.05);
+}
+
+.voice-button.listening {
+  @apply bg-red-600;
+  animation: pulse-custom 2s infinite;
+}
+
+.voice-button.idle {
+  @apply bg-blue-600 hover:bg-blue-700;
+}
+
+.voice-button.processing {
+  @apply bg-purple-600;
+}
+
+.voice-button.speaking {
+  @apply bg-orange-600 hover:bg-orange-700;
+}
+
+/* Conversation bubble styles */
+.conversation-bubble {
+  @apply p-4 rounded-xl border;
+}
+
+.conversation-bubble.user {
+  @apply bg-slate-700/30 border-slate-600;
+}
+
+.conversation-bubble.assistant {
+  @apply bg-slate-800/70 border-slate-700;
+}
+
+/* Status indicators */
+.status-dot {
+  @apply w-3 h-3 rounded-full;
+}
+
+.status-dot.connected {
+  @apply bg-green-400;
+  animation: pulse-custom 2s infinite;
+}
+
+.status-dot.connecting {
+  @apply bg-yellow-400;
+  animation: pulse 1s infinite;
+}
+
+.status-dot.disconnected {
+  @apply bg-red-400;
+}
+
+/* Responsive design helpers */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .voice-button {
+    @apply p-4;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .animate-fadeIn,
+  .animate-slideUp,
+  .animate-pulse-custom {
+    animation: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .glass-morphism {
+    background: var(--color-slate-800);
+    border: 2px solid var(--color-slate-400);
+  }
+}
+
+/* Dark mode is default, but support light mode preferences */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-background: #f8fafc;
+    --color-foreground: #0f172a;
+  }
 }

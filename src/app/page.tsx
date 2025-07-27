@@ -1,103 +1,99 @@
-import Image from "next/image";
+'use client';
+import { useState } from 'react';
+import VoiceAssistant from '@/components/VoiceAssistant';
+import ConversationHistory from '@/components/ConversationHistory';
+import { Brain, FileText, Zap } from 'lucide-react'; 
+
+interface Conversation {
+  id: string;
+  timestamp: Date;
+  userInput: string;
+  aiResponse: string;
+  context?: string;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleNewConversation = (userInput: string, aiResponse: string, context?: string) => {
+    const newConversation: Conversation = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      userInput,
+      aiResponse,
+      context
+    };
+    setConversations(prev => [newConversation, ...prev]);
+  };
+
+  return (
+    <main className="min-h-screen bg-gradient-voice">
+      {/* Header */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-8 animate-fadeIn">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Brain className="h-8 w-8 text-purple-400" />
+            <h1 className="text-4xl font-bold text-white">TechMentor Voice</h1>
+            <Zap className="h-8 w-8 text-yellow-400" />
+          </div>
+          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+            Real-time voice assistant powered by AssemblyAI Universal-Streaming, 
+            Context7 MCP, and Gemini 2.0 Flash. Ask anything about documentation!
+          </p>
+          
+          {/* Tech Stack Badges */}
+          <div className="flex flex-wrap justify-center gap-2 mt-4">
+            <span className="px-3 py-1 bg-blue-600 text-white text-sm rounded-full backdrop-blur-sm">Universal-Streaming</span>
+            <span className="px-3 py-1 bg-green-600 text-white text-sm rounded-full backdrop-blur-sm">Context7 MCP</span>
+            <span className="px-3 py-1 bg-purple-600 text-white text-sm rounded-full backdrop-blur-sm">Gemini 2.0 Flash</span>
+            <span className="px-3 py-1 bg-orange-600 text-white text-sm rounded-full backdrop-blur-sm">ElevenLabs TTS</span>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {/* Main Voice Interface */}
+        <div className="max-w-4xl mx-auto animate-slideUp">
+          <VoiceAssistant 
+            onConversation={handleNewConversation}
+            onProcessingChange={setIsProcessing}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          
+          {/* Sample Queries */}
+          <div className="mt-8 p-6 glass-morphism rounded-2xl">
+            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-400" />
+              Try asking:
+            </h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-700/50 rounded-lg border border-slate-600/50 backdrop-blur-xs">
+                <p className="text-gray-300">{`"How do I set up authentication in Next.js 14?"`}</p>
+              </div>
+              <div className="p-3 bg-slate-700/50 rounded-lg border border-slate-600/50 backdrop-blur-xs">
+                <p className="text-gray-300">{`"Show me TypeScript interfaces for React hooks"`}</p>
+              </div>
+              <div className="p-3 bg-slate-700/50 rounded-lg border border-slate-600/50 backdrop-blur-xs">
+                <p className="text-gray-300">{`"Explain Cloudflare Workers deployment"`}</p>
+              </div>
+              <div className="p-3 bg-slate-700/50 rounded-lg border border-slate-600/50 backdrop-blur-xs">
+                <p className="text-gray-300">{`"What's new in Python 3.12?"`}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Conversation History */}
+          {conversations.length > 0 && (
+            <ConversationHistory 
+              conversations={conversations}
+              isProcessing={isProcessing}
+            />
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-12 text-gray-400">
+          <p>Built for AssemblyAI Voice Agents Challenge • Powered by Universal-Streaming</p>
+        </div>
+      </div>
+    </main>
   );
 }

@@ -1,0 +1,26 @@
+# Cloudflare Wrangler Configuration for TechMentor Voice
+
+name = "techmentor-voice"
+compatibility_date = "2024-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "techmentor-voice"
+
+# Environment variables (set via dashboard or CLI)
+[env.production.vars]
+NEXT_PUBLIC_APP_NAME = "TechMentor Voice"
+NEXT_PUBLIC_APP_VERSION = "1.0.0"
+NEXT_PUBLIC_MCP_ENDPOINT = "https://mcp.context7.com/mcp"
+
+# Secrets (set via: wrangler secret put SECRET_NAME)
+# GEMINI_API_KEY = "your_gemini_api_key"
+# ELEVENLABS_API_KEY = "your_elevenlabs_api_key" 
+# NEXT_PUBLIC_ASSEMBLYAI_API_KEY = "your_assemblyai_api_key"
+
+[[env.production.routes]]
+pattern = "techmentor-voice.pages.dev/*"
+zone_name = "pages.dev"
+
+[build]
+command = "npm run build"
