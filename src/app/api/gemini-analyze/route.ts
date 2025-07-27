@@ -8,10 +8,10 @@ interface GeminiRequest {
   timestamp: number;
 }
 
-interface GeminiResponse {
-  response: string;
-  reasoning?: string;
-}
+// interface GeminiResponse {
+//   response: string;
+//   reasoning?: string;
+// }
 
 export async function POST(request: NextRequest) {
   try {

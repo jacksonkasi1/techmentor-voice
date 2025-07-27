@@ -13,12 +13,12 @@ interface MCPLibraryResult {
   examples?: string[];
 }
 
-interface MCPContextResponse {
-  context?: string;
-  libraries?: string[];
-  documentation?: string;
-  examples?: string[];
-}
+// interface MCPContextResponse {
+//   context?: string;
+//   libraries?: string[];
+//   documentation?: string;
+//   examples?: string[];
+// }
 
 // Context7 MCP Remote Endpoint
 const MCP_ENDPOINT = 'https://mcp.context7.com/mcp';
