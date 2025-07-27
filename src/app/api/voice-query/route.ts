@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     let libraries: string[] = [];
     
     try {
-      const mcpResponse = await fetch('http://localhost:3000/api/mcp-context', {
+      const mcpResponse = await fetch(`http://localhost:3000/api/mcp-context`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Step 2: Processing with Gemini 2.0 Flash...');
     
     try {
-      const geminiResponse = await fetch('http://localhost:3000/api/gemini-analyze', {
+      const geminiResponse = await fetch(`http://localhost:3000/api/gemini-analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

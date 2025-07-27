@@ -169,9 +169,10 @@ export default function VoiceAssistant({ onConversation, onProcessingChange }: V
         throw new Error('AssemblyAI API key not found. Please add NEXT_PUBLIC_ASSEMBLYAI_API_KEY to your .env.local file.');
       }
       
-      // Verify API key format (should start with a specific pattern)
-      if (!apiKey.startsWith('ak_') && apiKey.length < 20) {
-        throw new Error('Invalid AssemblyAI API key format. Please check your API key.');
+      // Verify API key has reasonable length (AssemblyAI keys are typically longer)
+      if (apiKey.length < 32) {
+        console.warn('⚠️ AssemblyAI API key seems short. Make sure you have a valid key.');
+        // Don't throw error here, let the WebSocket connection fail with proper error
       }
 
       console.log('Using API key:', apiKey.substring(0, 8) + '...');
