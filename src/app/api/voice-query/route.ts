@@ -1,106 +1,179 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { VoiceQueryRequest, VoiceQueryResponse } from '@/lib/voice-assistant/types';
-import { QueryCorrector } from '@/lib/voice-assistant/query-corrector';
-import { MCPClient } from '@/lib/voice-assistant/mcp-client';
-import { ResponseGenerator } from '@/lib/voice-assistant/response-generator';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  VoiceQueryRequest,
+  VoiceQueryResponse,
+} from "@/lib/voice-assistant/types";
+import { QueryCorrector } from "@/lib/voice-assistant/query-corrector";
+import { MCPClient } from "@/lib/voice-assistant/mcp-client";
+import { ResponseGenerator } from "@/lib/voice-assistant/response-generator";
 
-export async function POST(request: NextRequest): Promise<NextResponse<VoiceQueryResponse>> {
-  console.log('🎤 Voice query processing started');
+const MAX_VOICE_RESPONSE_LENGTH = 400; // Keep responses short for voice
+
+export async function POST(
+  request: NextRequest
+): Promise<NextResponse<VoiceQueryResponse>> {
+  const startTime = Date.now();
+  console.log("🎤 Voice query processing started");
+
+  try {
+    const { query, timestamp }: VoiceQueryRequest = await request.json();
     
-      try {
-          const { query, timestamp }: VoiceQueryRequest = await request.json();
-              console.log(`📝 Original query: "${query}"`);
+    // Validate input
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return NextResponse.json({
+        success: false,
+        response: "I didn't catch that. Could you please repeat your question?",
+        processingTime: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-                  // Check if it's a conversational query
-                      const isConversational = QueryCorrector.isConversational(query);
+    const trimmedQuery = query.trim();
+    console.log(`📝 Original query: "${trimmedQuery}"`);
 
-                          if (isConversational) {
-                                console.log('🗣️ Handling conversational query directly');
-                                      
-                                            const response = await ResponseGenerator.generate({
-                                                    query,
-                                                            correctedQuery: query,
-                                                                    documentation: '',
-                                                                            libraries: [],
-                                                                                    isConversational: true
-                                                                                          });
-                                                                                                
-                                                                                                      return NextResponse.json({
-                                                                                                              success: true,
-                                                                                                                      response,
-                                                                                                                              queryCorrection: { original: query, corrected: query },
-                                                                                                                                      context: { libraries: [], hasDocumentation: false },
-                                                                                                                                              processingTime: Date.now() - timestamp,
-                                                                                                                                                      timestamp: new Date().toISOString()
-                                                                                                                                                            });
-                                                                                                                                                                }
+    // Check if it's a conversational query
+    const isConversational = QueryCorrector.isConversational(trimmedQuery);
 
-                                                                                                                                                                    // For technical queries, use the full pipeline
-                                                                                                                                                                        console.log('🔧 Technical query - using full pipeline');
+    if (isConversational) {
+      console.log("🗣️ Handling conversational query directly");
 
-                                                                                                                                                                            // Step 1: Correct the query
-                                                                                                                                                                                const correctedQuery = await QueryCorrector.correct(query);
+      const response = await ResponseGenerator.generate({
+        query: trimmedQuery,
+        correctedQuery: trimmedQuery,
+        documentation: "",
+        libraries: [],
+        isConversational: true,
+      });
 
-                                                                                                                                                                                    // Step 2: Search MCP for documentation
-                                                                                                                                                                                        const { documentation, libraries } = await MCPClient.search(correctedQuery);
+      // Ensure response is voice-friendly length
+      const voiceResponse = ensureVoiceLength(response);
 
-                                                                                                                                                                                            // Step 3: Generate final response
-                                                                                                                                                                                                const finalResponse = await ResponseGenerator.generate({
-                                                                                                                                                                                                      query,
-                                                                                                                                                                                                            correctedQuery,
-                                                                                                                                                                                                                  documentation,
-                                                                                                                                                                                                                        libraries,
-                                                                                                                                                                                                                              isConversational: false
-                                                                                                                                                                                                                                  });
+      return NextResponse.json({
+        success: true,
+        response: voiceResponse,
+        queryCorrection: { original: trimmedQuery, corrected: trimmedQuery },
+        context: { libraries: [], hasDocumentation: false },
+        processingTime: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-                                                                                                                                                                                                                                      console.log('✅ Response generated successfully');
+    // For technical queries, use the full pipeline
+    console.log("🔧 Technical query - using full pipeline");
 
-                                                                                                                                                                                                                                          return NextResponse.json({
-                                                                                                                                                                                                                                                success: true,
-                                                                                                                                                                                                                                                      response: finalResponse,
-                                                                                                                                                                                                                                                            queryCorrection: {
-                                                                                                                                                                                                                                                                    original: query,
-                                                                                                                                                                                                                                                                            corrected: correctedQuery
-                                                                                                                                                                                                                                                                                  },
-                                                                                                                                                                                                                                                                                        context: {
-                                                                                                                                                                                                                                                                                                libraries: libraries || [],
-                                                                                                                                                                                                                                                                                                        hasDocumentation: !!documentation
-                                                                                                                                                                                                                                                                                                              },
-                                                                                                                                                                                                                                                                                                                    processingTime: Date.now() - timestamp,
-                                                                                                                                                                                                                                                                                                                          timestamp: new Date().toISOString()
-                                                                                                                                                                                                                                                                                                                              });
+    // Step 1: Correct the query with timeout
+    const correctedQuery = await Promise.race([
+      QueryCorrector.correct(trimmedQuery),
+      new Promise<string>((_, reject) => 
+        setTimeout(() => reject(new Error('Query correction timeout')), 3000)
+      )
+    ]).catch(error => {
+      console.warn("⚠️ Query correction failed, using original:", error.message);
+      return trimmedQuery;
+    });
 
-                                                                                                                                                                                                                                                                                                                                } catch (error) {
-                                                                                                                                                                                                                                                                                                                                    console.error('❌ Voice query error:', error);
-                                                                                                                                                                                                                                                                                                                                        
-                                                                                                                                                                                                                                                                                                                                            // Always return a helpful response
-                                                                                                                                                                                                                                                                                                                                                return NextResponse.json({
-                                                                                                                                                                                                                                                                                                                                                      success: true,
-                                                                                                                                                                                                                                                                                                                                                            response: "I'm having trouble processing your question. Could you please try asking again?",
-                                                                                                                                                                                                                                                                                                                                                                  fallback: true,
-                                                                                                                                                                                                                                                                                                                                                                        processingTime: Date.now() - Date.now(),
-                                                                                                                                                                                                                                                                                                                                                                              timestamp: new Date().toISOString()
-                                                                                                                                                                                                                                                                                                                                                                                  });
-                                                                                                                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                                                                                                                                    }
+    // Step 2: Search MCP for documentation with timeout
+    const searchResult = await Promise.race([
+      MCPClient.search(correctedQuery),
+      new Promise<{ documentation: string; libraries: string[] }>((_, reject) => 
+        setTimeout(() => reject(new Error('MCP search timeout')), 5000)
+      )
+    ]).catch(error => {
+      console.warn("⚠️ MCP search failed:", error.message);
+      return { documentation: "", libraries: [] };
+    });
 
-                                                                                                                                                                                                                                                                                                                                                                                    export async function GET() {
-                                                                                                                                                                                                                                                                                                                                                                                      return NextResponse.json({
-                                                                                                                                                                                                                                                                                                                                                                                          service: 'TechMentor Voice Query API',
-                                                                                                                                                                                                                                                                                                                                                                                              status: 'running',
-                                                                                                                                                                                                                                                                                                                                                                                                  version: '2.0',
-                                                                                                                                                                                                                                                                                                                                                                                                      architecture: 'modular',
-                                                                                                                                                                                                                                                                                                                                                                                                          modules: [
-                                                                                                                                                                                                                                                                                                                                                                                                                'QueryCorrector - Voice input correction',
-                                                                                                                                                                                                                                                                                                                                                                                                                      'MCPClient - Documentation search',
-                                                                                                                                                                                                                                                                                                                                                                                                                            'ResponseGenerator - AI response generation'
-                                                                                                                                                                                                                                                                                                                                                                                                                                ],
-                                                                                                                                                                                                                                                                                                                                                                                                                                    flow: [
-                                                                                                                                                                                                                                                                                                                                                                                                                                          '1. Voice Query → Query Correction',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                '2. Corrected Query → MCP Documentation Search',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                      '3. Context + Query → AI Response Generation',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                            '4. Response → Text-to-Speech'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                ],
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                    timestamp: new Date().toISOString()
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                      });
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
+    const { documentation, libraries } = searchResult;
+
+    // Step 3: Generate final response
+    const finalResponse = await ResponseGenerator.generate({
+      query: trimmedQuery,
+      correctedQuery,
+      documentation,
+      libraries,
+      isConversational: false,
+    });
+
+    // Ensure response is voice-friendly
+    const voiceResponse = ensureVoiceLength(finalResponse);
+
+    // Log if we had to truncate
+    if (voiceResponse !== finalResponse) {
+      console.log(`📏 Response truncated from ${finalResponse.length} to ${voiceResponse.length} chars`);
+    }
+
+    console.log("✅ Response generated successfully");
+
+    return NextResponse.json({
+      success: true,
+      response: voiceResponse,
+      queryCorrection: {
+        original: trimmedQuery,
+        corrected: correctedQuery,
+      },
+      context: {
+        libraries: libraries || [],
+        hasDocumentation: !!documentation,
+      },
+      processingTime: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error("❌ Voice query error:", error);
+    
+    // Determine appropriate error response
+    const errorMessage = getErrorResponse(error);
+
+    return NextResponse.json({
+      success: true, // Keep true to ensure voice continues
+      response: errorMessage,
+      fallback: true,
+      processingTime: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
+/**
+ * Ensures response is appropriate length for voice output
+ */
+function ensureVoiceLength(text: string): string {
+  if (!text || text.length <= MAX_VOICE_RESPONSE_LENGTH) {
+    return text;
+  }
+
+  // Try to cut at a sentence boundary
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  let result = "";
+  
+  for (const sentence of sentences) {
+    if ((result + sentence).length > MAX_VOICE_RESPONSE_LENGTH - 20) {
+      break;
+    }
+    result += sentence;
+  }
+
+  // If we couldn't get any complete sentences, just truncate
+  if (!result) {
+    result = text.substring(0, MAX_VOICE_RESPONSE_LENGTH - 3) + "...";
+  }
+
+  return result.trim();
+}
+
+/**
+ * Get appropriate error response based on error type
+ */
+function getErrorResponse(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('timeout')) {
+      return "The response is taking longer than expected. Please try asking your question again.";
+    }
+    if (error.message.includes('network')) {
+      return "I'm having trouble connecting to the documentation. Please check your connection and try again.";
+    }
+  }
+  
+  return "I encountered an issue processing your question. Could you please rephrase it and try again?";
+}

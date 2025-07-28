@@ -1,4 +1,7 @@
+// src/app/api/tts/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
+import { geminiMain } from '@/lib/gemini-client';
 
 interface TTSRequest {
   text: string;
@@ -6,10 +9,9 @@ interface TTSRequest {
   speed?: number;
 }
 
-// ElevenLabs API configuration
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
-const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - Natural, professional voice
-const ALTERNATIVE_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // Adam - Clear, friendly voice
+const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
+const MAX_TTS_LENGTH = 500; // Maximum characters for TTS
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,9 +24,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check text length BEFORE processing
+    if (text.length > MAX_TTS_LENGTH) {
+      console.error(`Text too long for TTS: ${text.length} characters (max: ${MAX_TTS_LENGTH})`);
+      return NextResponse.json(
+        { 
+          error: 'Text too long for TTS',
+          message: `Text must be under ${MAX_TTS_LENGTH} characters. Received: ${text.length}`,
+          textLength: text.length,
+          maxLength: MAX_TTS_LENGTH
+        },
+        { status: 400 }
+      );
+    }
+
     const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
     
-    // If no ElevenLabs API key, return instruction to use Web Speech API
     if (!elevenLabsKey) {
       console.log('ElevenLabs API key not found, client will use Web Speech API fallback');
       return NextResponse.json(
@@ -33,14 +48,23 @@ export async function POST(request: NextRequest) {
           useWebSpeech: true,
           message: 'Using Web Speech API fallback'
         },
-        { status: 422 } // Unprocessable Entity - signals client to use fallback
+        { status: 422 }
       );
     }
 
     console.log(`Generating TTS for text length: ${text.length} characters`);
 
-    // Clean and prepare text for TTS
-    const cleanedText = cleanTextForTTS(text);
+    // Clean text for TTS (but keep it short)
+    const cleanedText = await cleanTextForTTS(text);
+    
+    // Double-check cleaned text length
+    if (cleanedText.length > MAX_TTS_LENGTH) {
+      console.error(`Cleaned text still too long: ${cleanedText.length} characters`);
+      // Truncate with ellipsis
+      const truncated = cleanedText.substring(0, MAX_TTS_LENGTH - 3) + '...';
+      console.log(`Truncated to: ${truncated.length} characters`);
+    }
+
     const voiceId = voice || DEFAULT_VOICE_ID;
 
     // Call ElevenLabs API
@@ -53,27 +77,20 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         text: cleanedText,
-        model_id: 'eleven_monolingual_v1', // Fast, high-quality model
+        model_id: 'eleven_monolingual_v1',
         voice_settings: {
-          stability: 0.5,      // Balanced stability
-          similarity_boost: 0.75,  // Good voice consistency
-          style: 0.3,          // Slightly expressive
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.3,
           use_speaker_boost: true,
           speaking_rate: speed
         },
-        output_format: 'mp3_44100_128' // Good quality, reasonable size
+        output_format: 'mp3_44100_128'
       })
     });
 
     if (!response.ok) {
       console.error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
-      
-      // Try with alternative voice
-      if (voiceId === DEFAULT_VOICE_ID) {
-        console.log('Retrying with alternative voice...');
-        return await retryWithAlternativeVoice(cleanedText, speed, elevenLabsKey);
-      }
-      
       throw new Error(`ElevenLabs API failed: ${response.status}`);
     }
 
@@ -86,7 +103,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.byteLength.toString(),
-        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Cache-Control': 'public, max-age=3600',
       }
     });
 
@@ -104,51 +121,60 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function retryWithAlternativeVoice(text: string, speed: number, apiKey: string): Promise<NextResponse> {
+async function cleanTextForTTS(text: string): Promise<string> {
   try {
-    const response = await fetch(`${ELEVENLABS_API_URL}/${ALTERNATIVE_VOICE_ID}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_monolingual_v1',
-        voice_settings: {
-          stability: 0.6,
-          similarity_boost: 0.8,
-          style: 0.2,
-          use_speaker_boost: true,
-          speaking_rate: speed
-        },
-        output_format: 'mp3_44100_128'
-      })
-    });
+    // First do basic cleanup
+    const basicCleanup = text
+      .replace(/\s+/g, ' ')
+      .replace(/\n+/g, '. ')
+      .trim();
 
-    if (!response.ok) {
-      throw new Error(`Alternative voice also failed: ${response.status}`);
-    }
+    // Use Gemini to intelligently clean and optimize the text for voice
+    const prompt = `Clean and optimize this text for text-to-speech (TTS) output. Make it natural for voice reading.
 
-    const audioBuffer = await response.arrayBuffer();
+Original text:
+${basicCleanup}
+
+Rules:
+1. Remove ALL markdown formatting (**, *, \`, #, etc.)
+2. Replace code blocks with brief descriptions like "code example for X"
+3. Convert technical symbols to spoken words (& → and, @ → at, # → hash)
+4. Replace URLs with "link" or "website"
+5. Convert file extensions to spoken form (.js → JavaScript file)
+6. Remove or rephrase anything that doesn't make sense when spoken
+7. Keep technical terms but make them pronounceable
+8. Ensure natural sentence flow for voice
+9. NO asterisks, NO backticks, NO formatting symbols
+10. If there are installation commands or code, summarize what they do instead
+
+Examples:
+- "Install with \`npm install @100mslive/sdk\`" → "Install using npm install one hundred ms live SDK"
+- "Check the **documentation** at https://..." → "Check the documentation at their website"
+- "config.js file" → "config JavaScript file"
+
+Cleaned text for TTS:`;
+
+    const result = await geminiMain.generateContent(prompt);
+    const cleanedText = result.response.text().trim();
     
-    return new NextResponse(audioBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Content-Length': audioBuffer.byteLength.toString(),
-        'Cache-Control': 'public, max-age=3600',
-      }
-    });
-
+    // Final safety cleanup to ensure no formatting remains
+    return cleanedText
+      .replace(/\*/g, '')
+      .replace(/`/g, '')
+      .replace(/#/g, '')
+      .replace(/```math/g, '')
+      .replace(/```/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
   } catch (error) {
-    console.error('Alternative voice TTS failed:', error);
-    throw error;
+    console.error('Gemini text cleaning failed, using fallback:', error);
+    // Fallback to basic cleaning if Gemini fails
+    return fallbackCleanText(text);
   }
 }
 
-function cleanTextForTTS(text: string): string {
+function fallbackCleanText(text: string): string {
   return text
     // Remove excessive whitespace
     .replace(/\s+/g, ' ')
@@ -158,7 +184,7 @@ function cleanTextForTTS(text: string): string {
     .replace(/`(.*?)`/g, '$1')        // Inline code
     .replace(/#{1,6}\s*/g, '')        // Headers
     // Clean up code blocks
-    .replace(/```[\s\S]*?```/g, '[code example]')
+    .replace(/```[\s\S]*?```/g, 'code example')
     .replace(/```/g, '')
     // Replace technical symbols with spoken equivalents
     .replace(/&/g, ' and ')
@@ -167,35 +193,11 @@ function cleanTextForTTS(text: string): string {
     .replace(/\$/g, ' dollar ')
     .replace(/%/g, ' percent ')
     // Handle URLs
-    .replace(/https?:\/\/[^\s]+/g, '[link]')
+    .replace(/https?:\/\/[^\s]+/g, 'website link')
     // Handle file extensions
     .replace(/\.(js|ts|tsx|jsx|py|css|html|json|md)($|\s)/g, ' $1 file$2')
     // Clean up
     .replace(/\n+/g, '. ')           // Convert newlines to periods
     .replace(/\s+/g, ' ')            // Normalize spaces
     .trim();
-}
-
-export async function GET() {
-  const hasApiKey = !!process.env.ELEVENLABS_API_KEY;
-  
-  return NextResponse.json({
-    service: 'Text-to-Speech API',
-    status: 'running',
-    provider: hasApiKey ? 'ElevenLabs' : 'Web Speech API (fallback)',
-    elevenlabsConfigured: hasApiKey,
-    defaultVoice: hasApiKey ? DEFAULT_VOICE_ID : 'browser-default',
-    supportedFormats: hasApiKey ? ['mp3'] : ['browser-native'],
-    features: hasApiKey ? [
-      'High-quality neural TTS',
-      'Multiple voice options',
-      'Speed control',
-      'Professional voice cloning'
-    ] : [
-      'Browser-native TTS',
-      'No API required',
-      'Local processing'
-    ],
-    timestamp: new Date().toISOString()
-  });
 }

@@ -19,12 +19,23 @@ Rules:
 3. For integration questions, keep both technologies: "better auth next js" → "better auth nextjs"
 4. Remove filler words but keep technical terms
 5. Return 1-4 words maximum
+6. Convert spelled out numbers to their numeric form for tech names:
+   - "one hundred millisecond" → "100ms"
+   - "one hundred ms live" → "100mslive"
+   - "hundred ms" → "100ms"
+7. Common tech name corrections:
+   - "100 millisecond" → "100mslive"
+   - "hundred millisecond live" → "100mslive"
+   - "100ms live" → "100mslive"
 
 Examples:
 "explain better auth next js github integration" → "better auth nextjs"
 "tell me about better also" → "better auth"
 "how to use drizzle worm with next" → "drizzle orm nextjs"
 "react hooks tutorial" → "react hooks"
+"one hundred millisecond web sdk" → "100mslive web sdk"
+"explain hundred ms live" → "100mslive"
+"what is 100 millisecond live" → "100mslive"
 
 Corrected search term:`;
 
